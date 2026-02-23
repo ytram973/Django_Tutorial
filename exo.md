@@ -32,3 +32,14 @@ Question.objects.filter(pub_date__month=6)
 # by day
 Question.objects.filter(pub_date__day=1)
 ```
+### 3 
+```python
+
+q =Question.objects.filter(pk=3)
+
+print(q.id)
+print(q.question_text)
+print(q.pub_date)
+
+q.choice_set.all()
+```
