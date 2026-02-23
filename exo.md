@@ -43,3 +43,18 @@ print(q.pub_date)
 
 q.choice_set.all()
 ```
+### 4
+```python
+for question in Question.objects.all():
+    print("Question :")
+    print("Id:", question.id)
+    print("Texte:", question.question_text)
+    print("Date:", question.pub_date)
+    
+    print("Choix :")
+    for choice in question.choice_set.all():
+        print("   -", choice.choice_text, "| votes:", choice.votes)
+    
+    print("***********")
+
+```
