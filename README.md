@@ -1,15 +1,25 @@
-2.2 Exercices sur les parties 1 et 2
 
-5: non je ne peut pas
+La racine = dossier où se trouve `manage.py`.
+
+```bash
+cd chemin/vers/ton_projet
+
+# Créer l'environnement virtuel 
+python -m venv venv
+
+# Activer le venv
+venv\Scripts\activate
+
+# Lancer le serveur Django
+python manage.py runserver
+
+# Ouvrir le shell Django
+python manage.py shell
+
+# Migrations (quand tu modifies les models)
+# Créer les migrations :
+python manage.py makemigrations
 
 
-
-```python
-py manage.py shell
-
-from polls.models import Question
-
-for question in Question.objects.all():
-    print(question.id, question.question_text, question.pub_date)
-
-```
+# Appliquer les migrations :
+python manage.py migrate
