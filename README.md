@@ -1,7 +1,5 @@
 
 ```bash
-cd chemin/vers/ton_projet
-
 # Créer l'environnement virtuel 
 python -m venv venv
 
