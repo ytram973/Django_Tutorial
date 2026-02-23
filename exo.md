@@ -21,4 +21,14 @@ for question in Question.objects.all():
     print(question.id, question.question_text, question.pub_date)
 
 ```
+### 2 
+```python
+# by year
+Question.objects.filter(pub_date__year=2025)
 
+# by month
+Question.objects.filter(pub_date__month=6)
+
+# by day
+Question.objects.filter(pub_date__day=1)
+```
