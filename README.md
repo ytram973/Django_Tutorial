@@ -1,6 +1,4 @@
 
-La racine = dossier où se trouve `manage.py`.
-
 ```bash
 cd chemin/vers/ton_projet
 
