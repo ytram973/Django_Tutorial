@@ -58,3 +58,10 @@ for question in Question.objects.all():
     print("***********")
 
 ```
+### 5
+```python
+for question in Question.objects.all():
+    count = question.choice_set.count()
+    print(question.question_text, "→", count, "choix")
+
+```
