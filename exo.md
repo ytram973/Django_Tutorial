@@ -65,3 +65,14 @@ for question in Question.objects.all():
     print(question.question_text, "→", count, "choix")
 
 ```
+### 7
+```python
+# ordre décroissant
+questions = Question.objects.order_by("-pub_date")
+# ordre croissant
+questions = Question.objects.order_by("pub_date")
+
+for q in questions:
+    print(q.question_text, q.pub_date)
+
+```
