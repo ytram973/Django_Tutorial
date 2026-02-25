@@ -1,0 +1,3 @@
+{% for q in all_question_list %}
+  <a href="{% url 'polls:frequency' q.id %}">{{ q.question_text }}</a><br>
+{% endfor %}

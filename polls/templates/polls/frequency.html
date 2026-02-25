@@ -1,0 +1,8 @@
+<h1>{{ question.question_text }}</h1>
+<p>Total votes : {{ total_votes }}</p>
+
+<ul>
+  {% for text, votes, pct in choices %}
+    <li>{{ text }} — {{ votes }} vote{{ votes|pluralize }} — {{ pct }}%</li>
+  {% endfor %}
+</ul>
