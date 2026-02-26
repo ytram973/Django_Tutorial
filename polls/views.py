@@ -8,6 +8,8 @@ from .models import Question ,Choice
 from django.template import loader
 from django.views import generic
 from django.db.models import Sum, Avg
+from datetime import datetime
+from django.utils import timezone
 
 
 class IndexView(generic.ListView):
@@ -16,7 +18,19 @@ class IndexView(generic.ListView):
 
     def get_queryset(self):
         return Question.objects.order_by("-pub_date")[:5]
+    
+    def post(self, request):
+        question_text = request.POST.get("question_text", "").strip()
+        pub_date_raw = request.POST.get("pub_date", "").strip()
 
+        pub_date = datetime.fromisoformat(pub_date_raw)
+        pub_date = timezone.make_aware(pub_date, timezone.get_current_timezone())
+
+        Question.objects.create(question_text=question_text, pub_date=pub_date)
+
+        return HttpResponseRedirect(reverse("polls:index"))
+
+    
 class DetailView(generic.DetailView):
     model = Question
     template_name = "polls/detail.html"
