@@ -36,11 +36,13 @@ class IndexView(generic.ListView):
         if timezone.is_naive(pub_date):
             pub_date = timezone.make_aware(pub_date, timezone.get_current_timezone())
 
-        Question.objects.create(
+        question = Question.objects.create(
             question_text=form.cleaned_data["question_text"],
             pub_date=pub_date
         )
-
+        for choice_text in form.get_choices():
+            Choice.objects.create(question=question, choice_text=choice_text)
+            
         return HttpResponseRedirect(reverse("polls:index")) 
     
 class DetailView(generic.DetailView):
