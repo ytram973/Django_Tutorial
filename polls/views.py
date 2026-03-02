@@ -22,7 +22,6 @@ class IndexView(generic.ListView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        # Ajoute un formulaire vide si pas déjà présent
         if "form" not in context:
             context["form"] = QuestionCreateForm()
         return context
