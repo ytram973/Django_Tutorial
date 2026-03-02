@@ -5,6 +5,7 @@ from django.http import HttpResponse, Http404, HttpResponseRedirect
 from django.urls import reverse
 from django.shortcuts import render,get_object_or_404
 from .models import Question ,Choice
+from .forms import QuestionCreateForm
 from django.template import loader
 from django.views import generic
 from django.db.models import Sum, Avg
@@ -18,18 +19,30 @@ class IndexView(generic.ListView):
 
     def get_queryset(self):
         return Question.objects.order_by("-pub_date")[:5]
-    
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        # Ajoute un formulaire vide si pas déjà présent
+        if "form" not in context:
+            context["form"] = QuestionCreateForm()
+        return context
+
     def post(self, request):
-        question_text = request.POST.get("question_text", "").strip()
-        pub_date_raw = request.POST.get("pub_date", "").strip()
+        form = QuestionCreateForm(request.POST)
+        
+        if not form.is_valid():
+            return self.render_to_response(self.get_context_data(form=form))
 
-        pub_date = datetime.fromisoformat(pub_date_raw)
-        pub_date = timezone.make_aware(pub_date, timezone.get_current_timezone())
+        pub_date = form.cleaned_data["pub_date"]
+        if timezone.is_naive(pub_date):
+            pub_date = timezone.make_aware(pub_date, timezone.get_current_timezone())
 
-        Question.objects.create(question_text=question_text, pub_date=pub_date)
+        Question.objects.create(
+            question_text=form.cleaned_data["question_text"],
+            pub_date=pub_date
+        )
 
-        return HttpResponseRedirect(reverse("polls:index"))
-
+        return HttpResponseRedirect(reverse("polls:index")) 
     
 class DetailView(generic.DetailView):
     model = Question
@@ -103,6 +116,7 @@ def vote(request, question_id):
     except (KeyError, Choice.DoesNotExist):
         
         return render(
+            request,
             "polls/detail.html",{
                 "question":question,
                 "error_message": "You didn't select a choice",

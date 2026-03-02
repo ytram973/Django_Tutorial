@@ -28,18 +28,13 @@
     {% endif %}
 
     <div style="margin-top: 20px; padding: 20px">
-        <h2>Créer une nouvelle question</h2>
-        <form method="POST" action="{% url 'polls:index' %}">
-            {% csrf_token %}
-            <label for="question_text">Question:</label><br>
-            <textarea id="question_text" name="question_text" required></textarea><br><br>
-
-            <label for="pub_date">Date de publication:</label><br>
-            <input type="datetime-local" id="pub_date" name="pub_date" required><br><br>
-
-            <button type="submit">Créer la question</button>
-        </form>
-    </div>
+    <h2>Créer une nouvelle question</h2>
+    <form method="POST" action="{% url 'polls:index' %}">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit">Créer la question</button>
+    </form>
+</div>
 </body>
 
 </html>
