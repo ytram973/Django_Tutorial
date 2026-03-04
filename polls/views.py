@@ -138,17 +138,18 @@ class QuerySetView(generic.TemplateView):
         context["q"]      = q
         context["search"] = self.request.GET.get("search", "").strip()
 
-        # Dynamically call query_n and snippet_n
         method  = getattr(self, f"query_{q}", None)
         snippet = getattr(self, f"snippet_{q}", None)
-        
+        sql     = getattr(self, f"sql_{q}", None)
+
         if method:
             context["result"]  = method(context)
             context["snippet"] = snippet() if snippet else ""
+            context["sql"]     = sql() if sql else ""
 
         return context
 
-    # ── 1. Sondages déjà publiés 
+    # ── 1. Sondages déjà publiés
     def query_1(self, ctx):
         return Question.objects.filter(
             pub_date__lte=timezone.now()
@@ -159,11 +160,11 @@ class QuerySetView(generic.TemplateView):
 
     def sql_1(self):
         return """SELECT *
-        FROM polls_question
-        WHERE pub_date <= '2026-03-04 12:00:00'
-        ORDER BY pub_date DESC"""
+FROM polls_question
+WHERE pub_date <= '2026-03-04 12:00:00'
+ORDER BY pub_date DESC"""
 
-    # ── 2. Recherche icontains 
+    # ── 2. Recherche icontains
     def query_2(self, ctx):
         terme = ctx["search"]
         if not terme:
@@ -175,14 +176,27 @@ class QuerySetView(generic.TemplateView):
     def snippet_2(self):
         return "Question.objects.filter(question_text__icontains='<terme>')"
 
-    # ── 3. Questions sans aucun choix 
+    def sql_2(self):
+        return """SELECT *
+FROM polls_question
+WHERE UPPER(question_text) LIKE UPPER('%terme%')
+ORDER BY pub_date DESC"""
+
+    # ── 3. Questions sans aucun choix
     def query_3(self, ctx):
         return Question.objects.filter(choice__isnull=True)
 
     def snippet_3(self):
         return "Question.objects.filter(choice__isnull=True)"
 
-    # ── 4. Nombre de choix par sondage 
+    def sql_3(self):
+        return """SELECT polls_question.*
+FROM polls_question
+LEFT JOIN polls_choice
+    ON polls_choice.question_id = polls_question.id
+WHERE polls_choice.id IS NULL"""
+
+    # ── 4. Nombre de choix par sondage
     def query_4(self, ctx):
         return (
             Question.objects
@@ -191,9 +205,20 @@ class QuerySetView(generic.TemplateView):
         )
 
     def snippet_4(self):
-        return "Question.objects.annotate(nb_choices=Count('choice')).order_by('-nb_choices')"
+        return "Question.objects.annotate(nb_choices=Count('choice'), total_votes=Sum('choice__votes')).order_by('-nb_choices')"
 
-    # ── 5. Le choix le plus voté global 
+    def sql_4(self):
+        return """SELECT
+    polls_question.*,
+    COUNT(polls_choice.id)   AS nb_choices,
+    SUM(polls_choice.votes)  AS total_votes
+FROM polls_question
+LEFT JOIN polls_choice
+    ON polls_choice.question_id = polls_question.id
+GROUP BY polls_question.id
+ORDER BY nb_choices DESC"""
+
+    # ── 5. Le choix le plus voté global
     def query_5(self, ctx):
         best = Choice.objects.order_by("-votes").select_related("question").first()
         return [best] if best else []
@@ -201,14 +226,33 @@ class QuerySetView(generic.TemplateView):
     def snippet_5(self):
         return "Choice.objects.order_by('-votes').select_related('question').first()"
 
-    # ── 6. Choix jamais votés 
+    def sql_5(self):
+        return """SELECT
+    polls_choice.*,
+    polls_question.*
+FROM polls_choice
+INNER JOIN polls_question
+    ON polls_question.id = polls_choice.question_id
+ORDER BY polls_choice.votes DESC
+LIMIT 1"""
+
+    # ── 6. Choix jamais votés
     def query_6(self, ctx):
         return Choice.objects.filter(votes=0).select_related("question")
 
     def snippet_6(self):
         return "Choice.objects.filter(votes=0).select_related('question')"
 
-    # ── 7. Sondages avec au moins 5 votes 
+    def sql_6(self):
+        return """SELECT
+    polls_choice.*,
+    polls_question.*
+FROM polls_choice
+INNER JOIN polls_question
+    ON polls_question.id = polls_choice.question_id
+WHERE polls_choice.votes = 0"""
+
+    # ── 7. Sondages avec au moins 5 votes
     def query_7(self, ctx):
         return (
             Question.objects
@@ -220,7 +264,18 @@ class QuerySetView(generic.TemplateView):
     def snippet_7(self):
         return "Question.objects.annotate(total=Sum('choice__votes')).filter(total__gte=5)"
 
-    # ── 8. Questions publiées cette semaine 
+    def sql_7(self):
+        return """SELECT
+    polls_question.*,
+    SUM(polls_choice.votes) AS total
+FROM polls_question
+LEFT JOIN polls_choice
+    ON polls_choice.question_id = polls_question.id
+GROUP BY polls_question.id
+HAVING SUM(polls_choice.votes) >= 5
+ORDER BY total DESC"""
+
+    # ── 8. Questions publiées cette semaine
     def query_8(self, ctx):
         since = timezone.now() - timedelta(days=7)
         return Question.objects.filter(pub_date__gte=since).order_by("-pub_date")
@@ -228,7 +283,13 @@ class QuerySetView(generic.TemplateView):
     def snippet_8(self):
         return "Question.objects.filter(pub_date__gte=timezone.now() - timedelta(days=7))"
 
-    # ── 9. Reset votes — update() en masse 
+    def sql_8(self):
+        return """SELECT *
+FROM polls_question
+WHERE pub_date >= '2026-02-25 12:00:00'
+ORDER BY pub_date DESC"""
+
+    # ── 9. Reset votes — update() en masse
     def query_9(self, ctx):
         first = Question.objects.first()
         if not first:
@@ -239,7 +300,12 @@ class QuerySetView(generic.TemplateView):
     def snippet_9(self):
         return "Choice.objects.filter(question=q).update(votes=0)"
 
-    # ── 10. Classement par popularité 
+    def sql_9(self):
+        return """UPDATE polls_choice
+SET votes = 0
+WHERE question_id = 1"""
+
+    # ── 10. Classement par popularité
     def query_10(self, ctx):
         return (
             Question.objects
@@ -250,7 +316,17 @@ class QuerySetView(generic.TemplateView):
     def snippet_10(self):
         return "Question.objects.annotate(total_votes=Sum('choice__votes')).order_by(F('total_votes').desc(nulls_last=True))"
 
-    # ── 11. Sondages avec exactement 1 choix 
+    def sql_10(self):
+        return """SELECT
+    polls_question.*,
+    SUM(polls_choice.votes) AS total_votes
+FROM polls_question
+LEFT JOIN polls_choice
+    ON polls_choice.question_id = polls_question.id
+GROUP BY polls_question.id
+ORDER BY total_votes DESC NULLS LAST"""
+
+    # ── 11. Sondages avec exactement 1 choix
     def query_11(self, ctx):
         return (
             Question.objects
@@ -260,11 +336,26 @@ class QuerySetView(generic.TemplateView):
 
     def snippet_11(self):
         return "Question.objects.annotate(nb=Count('choice')).filter(nb=1)"
-    
-    # ── 12. Sondages qui ont des choix (Exclusion des vides) 
+
+    def sql_11(self):
+        return """SELECT
+    polls_question.*,
+    COUNT(polls_choice.id) AS nb
+FROM polls_question
+LEFT JOIN polls_choice
+    ON polls_choice.question_id = polls_question.id
+GROUP BY polls_question.id
+HAVING COUNT(polls_choice.id) = 1"""
+
+    # ── 12. Sondages qui ont des choix (Exclusion des vides)
     def query_12(self, ctx):
-        # On exclut les questions dont le set de choix est nul
         return Question.objects.exclude(choice__isnull=True).distinct()
 
     def snippet_12(self):
         return "Question.objects.exclude(choice__isnull=True)"
+
+    def sql_12(self):
+        return """SELECT DISTINCT polls_question.*
+FROM polls_question
+INNER JOIN polls_choice
+    ON polls_choice.question_id = polls_question.id"""

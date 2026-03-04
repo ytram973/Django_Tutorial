@@ -55,6 +55,9 @@
     {% if snippet %}
     <div class="snippet">{{ snippet }}</div>
     {% endif %}
+    {% if sql %}
+    <div class="sql">{{ sql }}</div>
+    {% endif %}
 
     {% if q == "2" %}
     <form class="extra-form" method="get">
@@ -100,7 +103,7 @@
 
     {% elif q == "5" %}
         {% for item in result %}
-        <div class="info-card">
+        <div class="info-card table-wrap">
             <div class="label">Choix le plus voté</div>
             <div class="value">{{ item.choice_text }}</div>
             <div class="meta">Question : {{ item.question.question_text }}</div>
