@@ -74,9 +74,9 @@
     {% elif q == "4" %}
         {% for question in result %}
         <div style="margin-bottom: 1.5rem;">
-            <div style="font-weight:600; margin-bottom:0.5rem;">
+            <div style="font-weight:600; margin-bottom:0.5rem;" class="table-wrap">
                 {{ question.question_text }}
-                <span style="color:#64748b; font-size:0.8rem; margin-left:0.5rem;">
+                <span style="color:#9bcd27; font-size:0.8rem; margin-left:0.5rem;">
                     {{ question.total_votes|default:"0" }} vote{{ question.total_votes|default:0|pluralize }}
                 </span>
             </div>

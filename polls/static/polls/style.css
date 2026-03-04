@@ -10,11 +10,25 @@ body {
 nav a {
     display: flex;
     color: rgb(3, 255, 40);
+    font-size: 25px;
+
     
     /* background-color: rgb(3, 4, 4); */
 
 }
 
+.vote {
+    font-size: 15px;
+    color: rgb(202, 14, 14);
+}
 .snippet{
     color: rgb(251, 113, 156);
+    text-align: center;
+    font-size: 25px;
 }
+
+.table-wrap,extra-form{
+    font-size: 20px;
+    background-color: black;
+}
+
