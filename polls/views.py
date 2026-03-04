@@ -157,6 +157,12 @@ class QuerySetView(generic.TemplateView):
     def snippet_1(self):
         return "Question.objects.filter(pub_date__lte=timezone.now()).order_by('-pub_date')"
 
+    def sql_1(self):
+        return """SELECT *
+        FROM polls_question
+        WHERE pub_date <= '2026-03-04 12:00:00'
+        ORDER BY pub_date DESC"""
+
     # ── 2. Recherche icontains 
     def query_2(self, ctx):
         terme = ctx["search"]
