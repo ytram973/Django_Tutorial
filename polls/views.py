@@ -8,8 +8,8 @@ from .models import Question ,Choice
 from .forms import QuestionCreateForm
 from django.template import loader
 from django.views import generic
-from django.db.models import Sum, Avg
-from datetime import datetime
+from django.db.models import F, Count, Sum, Avg
+from datetime import datetime, timedelta
 from django.utils import timezone
 
 
@@ -127,3 +127,138 @@ def vote(request, question_id):
         selected_choice.votes += 1
         selected_choice.save()
     return HttpResponseRedirect(reverse("polls:results", args=(question_id,)))
+
+
+class QuerySetView(generic.TemplateView):
+    template_name = "polls/queryset.html"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        q = self.request.GET.get("q", "")
+        context["q"]      = q
+        context["search"] = self.request.GET.get("search", "").strip()
+
+        # Dynamically call query_n and snippet_n
+        method  = getattr(self, f"query_{q}", None)
+        snippet = getattr(self, f"snippet_{q}", None)
+        
+        if method:
+            context["result"]  = method(context)
+            context["snippet"] = snippet() if snippet else ""
+
+        return context
+
+    # ── 1. Sondages déjà publiés 
+    def query_1(self, ctx):
+        return Question.objects.filter(
+            pub_date__lte=timezone.now()
+        ).order_by("-pub_date")
+
+    def snippet_1(self):
+        return "Question.objects.filter(pub_date__lte=timezone.now()).order_by('-pub_date')"
+
+    # ── 2. Recherche icontains 
+    def query_2(self, ctx):
+        terme = ctx["search"]
+        if not terme:
+            return Question.objects.none()
+        return Question.objects.filter(
+            question_text__icontains=terme
+        ).order_by("-pub_date")
+
+    def snippet_2(self):
+        return "Question.objects.filter(question_text__icontains='<terme>')"
+
+    # ── 3. Questions sans aucun choix ────────────────────────────────────────
+    def query_3(self, ctx):
+        return Question.objects.filter(choice__isnull=True)
+
+    def snippet_3(self):
+        return "Question.objects.filter(choice__isnull=True)"
+
+    # ── 4. Nombre de choix par sondage ──────────────────────────────────────
+    def query_4(self, ctx):
+        return (
+            Question.objects
+            .annotate(nb_choices=Count("choice"), total_votes=Sum("choice__votes"))
+            .order_by("-nb_choices")
+        )
+
+    def snippet_4(self):
+        return "Question.objects.annotate(nb_choices=Count('choice')).order_by('-nb_choices')"
+
+    # ── 5. Le choix le plus voté global ─────────────────────────────────────
+    def query_5(self, ctx):
+        best = Choice.objects.order_by("-votes").select_related("question").first()
+        return [best] if best else []
+
+    def snippet_5(self):
+        return "Choice.objects.order_by('-votes').first()"
+
+    # ── 6. Choix jamais votés ────────────────────────────────────────────────
+    def query_6(self, ctx):
+        return Choice.objects.filter(votes=0).select_related("question")
+
+    def snippet_6(self):
+        return "Choice.objects.filter(votes=0).select_related('question')"
+
+    # ── 7. Sondages avec au moins 5 votes ───────────────────────────────────
+    def query_7(self, ctx):
+        return (
+            Question.objects
+            .annotate(total=Sum("choice__votes"))
+            .filter(total__gte=5)
+            .order_by("-total")
+        )
+
+    def snippet_7(self):
+        return "Question.objects.annotate(total=Sum('choice__votes')).filter(total__gte=5)"
+
+    # ── 8. Questions publiées cette semaine ──────────────────────────────────
+    def query_8(self, ctx):
+        since = timezone.now() - timedelta(days=7)
+        return Question.objects.filter(pub_date__gte=since).order_by("-pub_date")
+
+    def snippet_8(self):
+        return "Question.objects.filter(pub_date__gte=timezone.now() - timedelta(days=7))"
+
+    # ── 9. Reset votes — update() en masse ──────────────────────────────────
+    def query_9(self, ctx):
+        first = Question.objects.first()
+        if not first:
+            return []
+        updated = Choice.objects.filter(question=first).update(votes=0)
+        return [{"question": first, "updated": updated}]
+
+    def snippet_9(self):
+        return "Choice.objects.filter(question=q).update(votes=0)"
+
+    # ── 10. Classement par popularité ────────────────────────────────────────
+    def query_10(self, ctx):
+        return (
+            Question.objects
+            .annotate(total_votes=Sum("choice__votes"))
+            .order_by(F("total_votes").desc(nulls_last=True))
+        )
+
+    def snippet_10(self):
+        return "Question.objects.annotate(total_votes=Sum('choice__votes')).order_by(F('total_votes').desc(nulls_last=True))"
+
+    # ── 11. Sondages avec exactement 1 choix ─────────────────────────────────
+    def query_11(self, ctx):
+        return (
+            Question.objects
+            .annotate(nb=Count("choice"))
+            .filter(nb=1)
+        )
+
+    def snippet_11(self):
+        return "Question.objects.annotate(nb=Count('choice')).filter(nb=1)"
+    
+    # ── 12. Sondages qui ont des choix (Exclusion des vides) ──────────────────
+    def query_12(self, ctx):
+        # On exclut les questions dont le set de choix est nul
+        return Question.objects.exclude(choice__isnull=True).distinct()
+
+    def snippet_12(self):
+        return "Question.objects.exclude(choice__isnull=True)"

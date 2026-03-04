@@ -1,0 +1,221 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QuerySet</title>
+    <link rel="stylesheet" href="{% static 'polls/style.css' %}">
+</head>
+<body>
+
+<nav>
+    <h1>QuerySet</h1>
+    <a href="?q=1" {% if q == "1" %}class="active"{% endif %}>1. Publiés</a>
+    <a href="?q=2" {% if q == "2" %}class="active"{% endif %}>2. Recherche</a>
+    <a href="?q=3" {% if q == "3" %}class="active"{% endif %}>3. Sans choix</a>
+    <a href="?q=4" {% if q == "4" %}class="active"{% endif %}>4. Nb choix</a>
+    <a href="?q=5" {% if q == "5" %}class="active"{% endif %}>5. Meilleur choix</a>
+    <a href="?q=6" {% if q == "6" %}class="active"{% endif %}>6. Votes=0</a>
+    <a href="?q=7" {% if q == "7" %}class="active"{% endif %}>7. ≥5 votes</a>
+    <a href="?q=8" {% if q == "8" %}class="active"{% endif %}>8. Cette semaine</a>
+    <a href="?q=9" {% if q == "9" %}class="active"{% endif %}>9. Reset votes</a>
+    <a href="?q=10" {% if q == "10" %}class="active"{% endif %}>10. Popularité</a>
+    <a href="?q=11" {% if q == "11" %}class="active"{% endif %}>11. 1 seul choix</a>
+    <a href="?q=12" {% if q == "12" %}class="active"{% endif %}>12. Non vides</a>
+</nav>
+
+<div class="content">
+
+    {% if not q %}
+    <div class="empty">
+        <div style="font-size:3rem">🗳️</div>
+        <p>Choisissez une requête dans la navigation</p>
+    </div>
+
+    {% else %}
+
+    <div class="result-header">
+        <h2><span>#{{ q }}</span>
+            {% if q == "1" %}Sondages déjà publiés{% endif %}
+            {% if q == "2" %}Recherche dans les questions{% endif %}
+            {% if q == "3" %}Questions sans aucun choix{% endif %}
+            {% if q == "4" %}Nombre de choix par sondage{% endif %}
+            {% if q == "5" %}Le choix le plus voté global{% endif %}
+            {% if q == "6" %}Choix jamais votés{% endif %}
+            {% if q == "7" %}Sondages avec au moins 5 votes{% endif %}
+            {% if q == "8" %}Questions publiées cette semaine{% endif %}
+            {% if q == "9" %}Reset votes — update() en masse{% endif %}
+            {% if q == "10" %}Classement par popularité{% endif %}
+            {% if q == "11" %}Sondages avec exactement 1 choix{% endif %}
+            {% if q == "12" %}Sondages ayant au moins un choix{% endif %}
+        </h2>
+    </div>
+
+    {% if snippet %}
+    <div class="snippet">{{ snippet }}</div>
+    {% endif %}
+
+    {% if q == "2" %}
+    <form class="extra-form" method="get">
+        <input type="hidden" name="q" value="2">
+        <input type="text" name="search" value="{{ search }}" placeholder="Terme à rechercher..." autofocus>
+        <button type="submit">Rechercher</button>
+    </form>
+    {% endif %}
+
+    {% if q == "9" %}
+    <div class="warning">Attention : Cette requête remet à zéro les votes du premier sondage en base.</div>
+    {% endif %}
+
+    {% if not result %}
+        <div class="no-result">Aucun résultat.</div>
+
+    {% elif q == "4" %}
+        {% for question in result %}
+        <div style="margin-bottom: 1.5rem;">
+            <div style="font-weight:600; margin-bottom:0.5rem;">
+                {{ question.question_text }}
+                <span style="color:#64748b; font-size:0.8rem; margin-left:0.5rem;">
+                    {{ question.total_votes|default:"0" }} vote{{ question.total_votes|default:0|pluralize }}
+                </span>
+            </div>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr><th>Choix</th><th>Votes</th></tr>
+                    </thead>
+                    <tbody>
+                        {% for choice in question.choice_set.all %}
+                        <tr>
+                            <td class="td-main">{{ choice.choice_text }}</td>
+                            <td class="td-num">{{ choice.votes }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endfor %}
+
+    {% elif q == "5" %}
+        {% for item in result %}
+        <div class="info-card">
+            <div class="label">Choix le plus voté</div>
+            <div class="value">{{ item.choice_text }}</div>
+            <div class="meta">Question : {{ item.question.question_text }}</div>
+            <div class="meta" style="color:#f59e0b; margin-top:0.4rem;">{{ item.votes }} vote{{ item.votes|pluralize }}</div>
+        </div>
+        {% endfor %}
+
+    {% elif q == "6" %}
+        <div class="table-wrap">
+            <table>
+                <thead><tr><th>#</th><th>Choix</th><th>Question</th><th>Votes</th></tr></thead>
+                <tbody>
+                    {% for choice in result %}
+                    <tr>
+                        <td class="td-id">{{ choice.pk }}</td>
+                        <td class="td-main">{{ choice.choice_text }}</td>
+                        <td class="td-date">{{ choice.question.question_text|truncatechars:45 }}</td>
+                        <td><span class="badge-non">0</span></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+    {% elif q == "7" %}
+        <div class="table-wrap">
+            <table>
+                <thead><tr><th>Question</th><th>Total votes</th><th>Publiée le</th></tr></thead>
+                <tbody>
+                    {% for question in result %}
+                    <tr>
+                        <td class="td-main">{{ question.question_text }}</td>
+                        <td class="td-num">{{ question.total }}</td>
+                        <td class="td-date">{{ question.pub_date|date:"d/m/Y H:i" }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+    {% elif q == "9" %}
+        {% for item in result %}
+        <div class="info-card" style="border-color:#10b981;">
+            <div class="label">UPDATE exécuté</div>
+            <div class="value">{{ item.updated }} choix remis à 0</div>
+            <div class="meta">Question : {{ item.question.question_text }}</div>
+        </div>
+        {% endfor %}
+
+    {% elif q == "10" %}
+        <div class="table-wrap">
+            <table>
+                <thead><tr><th>Rang</th><th>Question</th><th>Total votes</th><th>Publiée le</th></tr></thead>
+                <tbody>
+                    {% for question in result %}
+                    <tr>
+                        <td class="td-id">{{ forloop.counter }}</td>
+                        <td class="td-main">{{ question.question_text }}</td>
+                        <td class="td-num">{{ question.total_votes|default:"—" }}</td>
+                        <td class="td-date">{{ question.pub_date|date:"d/m/Y H:i" }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+    {% elif q == "11" %}
+        <div class="table-wrap">
+            <table>
+                <thead><tr><th>Question</th><th>Nb choix</th><th>Publiée le</th></tr></thead>
+                <tbody>
+                    {% for question in result %}
+                    <tr>
+                        <td class="td-main">{{ question.question_text }}</td>
+                        <td><span class="badge-non">{{ question.nb }}</span></td>
+                        <td class="td-date">{{ question.pub_date|date:"d/m/Y H:i" }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+    {% else %}
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Question</th>
+                        <th>Publiée le</th>
+                        <th>Récente ?</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for question in result %}
+                    <tr>
+                        <td class="td-id">{{ question.pk }}</td>
+                        <td class="td-main">{{ question.question_text }}</td>
+                        <td class="td-date">{{ question.pub_date|date:"d/m/Y H:i" }}</td>
+                        <td>
+                            {% if question.was_published_recently %}
+                                <span class="badge-oui">oui</span>
+                            {% else %}
+                                <span class="badge-non">non</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% endif %}
+
+    {% endif %}
+
+</div>
+</body>
+</html>

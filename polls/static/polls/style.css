@@ -1,7 +1,20 @@
 li a {
     color: rgb(254, 7, 225);
 }
+
+
 body {
-    background: rgb(239, 235, 235) url("images/background.png") no-repeat;
+    background: rgb(239, 235, 235) url("images/background.png") repeat;
     color: white;
+}
+nav a {
+    display: flex;
+    color: rgb(3, 255, 40);
+    
+    /* background-color: rgb(3, 4, 4); */
+
+}
+
+.snippet{
+    color: rgb(251, 113, 156);
 }

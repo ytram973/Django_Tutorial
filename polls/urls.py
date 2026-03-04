@@ -12,4 +12,5 @@ urlpatterns = [
     path("<int:pk>/frequency/", views.FrequencyView.as_view(), name="frequency"),
     path("statistics/", views.StatisticsView.as_view(), name="statistics"),
     path("<int:question_id>/vote/", views.vote, name="vote"),
+    path("queryset/", views.QuerySetView.as_view(), name="queryset"),
 ]
